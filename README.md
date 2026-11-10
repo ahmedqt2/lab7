@@ -1,16 +1,16 @@
-# React + Vite
+1. State choices. The user goes in Context and the cart goes in Zustand becuase several components need them. The filters go in the URL so a shared link keeps them, and the product list stays in the page's `useFetch` state. The theme stays in the layout and gets saved to `localStorage` so it survives a refesh.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+2. Context vs Zustand. Login only changes when someone signs in or out, so Context is enogh. The cart changes more often, and Zustand lets the navbar read just the item count. A cart Context would update all its consumers when the value changes, while Zustand would add a seperate store for login.
 
-Currently, two official plugins are available:
+3. What `useFetch` shares. Both product pages use the same loading, error, and cancellation logic. Each page still has its own request and data.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+4. Product ID type. `useParams` gives the ID as a string. I use it in the request URL and pass it to `useFetch` so changing it loads a diferent product.
 
-## React Compiler
+5. Protected route. It just redirects signed-out users in the broswer. Real security needs a server to check the user's session and permisions before sending private data.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+6. Refreshing a link. On a static server without a fallback, `/products/3` can return a 404. The Vite dev server sends `index.html` by defualt, then React Router opens the product page.
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Challenges
+
+The tricky part was swiching products while the old request was still loading. I used `AbortController` to cancel it when the product ID changes.
