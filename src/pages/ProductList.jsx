@@ -1,65 +1,60 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
-import { login } from '../api/authApi.js'
-import { useAuth } from '../context/AuthContext.jsx'
+import { useSearchParams } from 'react-router'
+import { fetchProducts } from '../api/productsApi.js'
+import ProductCard from '../components/ProductCard.jsx'
+import { useFetch } from '../hooks/useFetch.js'
 
-export default function Login() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [attempt, setAttempt] = useState(null)
-  const [error, setError] = useState('')
-  const { dispatch } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const returnTo = location.state?.from ?? '/'
+export default function ProductList() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const category = searchParams.get('category') ?? ''
+  const { loading, error, data: products } = useFetch(fetchProducts, [])
 
-  useEffect(() => {
-    if (!attempt) return
-
-    let active = true
-
-    async function signIn() {
-      try {
-        const user = await login(attempt.username, attempt.password)
-        if (!active) return
-        dispatch({ type: 'LOGGED_IN', user })
-        navigate(returnTo, { replace: true })
-      } catch (error) {
-        if (!active) return
-        setError(error.message)
-        setAttempt(null)
+  function updateFilter(name, value) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (value) {
+        next.set(name, value)
+      } else {
+        next.delete(name)
       }
-    }
-
-    signIn()
-    return () => { active = false }
-  }, [attempt, dispatch, navigate, returnTo])
-
-  function handleSubmit(event) {
-    event.preventDefault()
-    if (attempt) return
-    setError('')
-    setAttempt({ username: username.trim(), password })
+      return next
+    }, { replace: true })
   }
+
+  if (loading) return <p role="status">Loading products...</p>
+  if (error) return <p role="alert">Could not load products. {error.message}</p>
+
+  const categories = [...new Set(products.map((product) => product.category))].sort()
+  const titleQuery = query.trim().toLowerCase()
+  const filteredProducts = products.filter((product) =>
+    product.title.toLowerCase().includes(titleQuery)
+    && (!category || product.category === category)
+  )
 
   return (
     <>
-      <h1>Login</h1>
-      <form className="login-form" onSubmit={handleSubmit}>
+      <h1>Products</h1>
+      <div className="filters">
         <label>
-          Username
-          <input autoComplete="username" required value={username}
-            onChange={(event) => setUsername(event.target.value)} />
+          Search by title
+          <input value={query} onChange={(event) => updateFilter('q', event.target.value)} />
         </label>
         <label>
-          Password
-          <input type="password" autoComplete="current-password" required value={password}
-            onChange={(event) => setPassword(event.target.value)} />
+          Category
+          <select value={category} onChange={(event) => updateFilter('category', event.target.value)}>
+            <option value="">All categories</option>
+            {category && !categories.includes(category) && <option value={category}>{category}</option>}
+            {categories.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
         </label>
-        <button type="submit" disabled={attempt !== null}>Sign in</button>
-        {attempt && <p role="status">Signing in...</p>}
-        {error && <p role="alert">{error}</p>}
-      </form>
+      </div>
+      {filteredProducts.length === 0 ? (
+        <p>No products match these filters.</p>
+      ) : (
+        <div className="product-grid">
+          {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+        </div>
+      )}
     </>
   )
 }
