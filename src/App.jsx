@@ -7,7 +7,6 @@ import Login from './pages/Login.jsx'
 import NotFound from './pages/NotFound.jsx'
 import ProductDetail from './pages/ProductDetail.jsx'
 import ProductList from './pages/ProductList.jsx'
-
 export default function App() {
   return (
     <Routes>
